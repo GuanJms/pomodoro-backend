@@ -1,0 +1,151 @@
+openapi: 3.0.3
+
+info:
+  title: Pomodoro System API
+  description: a simple API to retrive service-running pomodoro and account management 
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local Dev Server
+
+paths: 
+  /system/state:
+    get:
+      summary: list system pomodoro state
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: successfully retrived system pomodoro state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pomodoroSetting:
+                    $ref: '#/components/schemas/PomodoroSetting'
+                  currentSession:
+                    type: number
+                  endTime:
+                    type: string
+                    format: date-time
+                  serverTime:
+                    type: string
+                    format: date-time
+  /system/start:
+    post:
+      summary: start a new pomodoro state
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PomodoroSetting'
+      responses:
+        '200':
+          description: successfully started a new pomodoro state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PomodoroSetting'
+
+  /users/login:
+    post:
+      summary: Existing user login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: User successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          description: Bad request of JSON
+        '409':
+          description: User already exists
+    
+  /users/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUser'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          description: Bad request of JSON
+        '409':
+          description: User already exists
+
+
+components:
+  schemas:
+    PomodoroSetting:
+      type: object
+      properties:
+        workTimeDuration:
+          type: number
+          default: 25
+          description: this is measrued in min
+        longBreakDuration:
+          type: number
+          default: 20
+          description: this is measured in min
+        shortBreakDuration:
+          type: number
+          default: 5
+          description: this is measured in min
+        scheduling:
+          type: string
+          default: W-SB-W-SB-W-SB-W-LB
+          description: Scheudling string format - e.g. W-SB-W-SB-W-SB-W-LB
+      
+    NewUser:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    Credentials:
+      type: object
+      properties:
+        username:
+          type: string
+          default: username
+        password:
+          type: string
+          default: password
+      required: [username, password]
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
