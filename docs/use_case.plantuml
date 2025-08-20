@@ -1,0 +1,17 @@
+@startuml
+left to right direction
+skinparam actorStyle awesome
+
+actor User
+
+usecase "View system state" as UC_ViewSystemState
+
+usecase "Register New User" as UC_NewUser
+usecase "Verify Email" as UC_EmailVerification
+usecase "Reset password through email" as UC_ResetPassword
+
+User -- UC_ViewSystemState
+User -- UC_NewUser
+User -- UC_EmailVerification
+User -- UC_ResetPassword
+@enduml

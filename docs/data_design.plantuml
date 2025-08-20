@@ -1,0 +1,31 @@
+@startuml
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define kvstore(x) class x << (K,#FFD700) >>
+package "PostgreSQL" {
+    table(users) {
+        id : UUID [PK]
+        username : string <<UNIQUE>>
+        email: string <<UNIQUE>>
+        password_hash : string
+        created_at : timestamp
+        updated_at : timestamp
+    }
+}
+
+package "Redis" {
+    class pomodoroSettings <<hash>> {
+        longBreakTime : int
+        workTime : int
+        shortBreakTime : int
+        sessionSequence : string
+    }
+
+    class systemState <<hash>> {
+        currentSession : int
+        endTime : datetime
+        timezone : string
+    }
+}
+
+@enduml
