@@ -1,0 +1,227 @@
+@startuml
+namespace clock {
+    class ClockRunner << (S,Aquamarine) >> {
+        - mu sync.RWMutex
+        - stateManager *StateManager
+        - sessionManager *SessionManager
+        - timerManager *TimerManager
+        - statsManager *StatisticsManager
+        - timeFormatter *TimeFormatter
+        - utils *ClockUtils
+        - onStateChange <font color=blue>func</font>(ClockState) 
+        - onTick <font color=blue>func</font>(time.Duration) 
+        - onComplete <font color=blue>func</font>(ClockState) 
+
+        - startNewSession() 
+
+        + SetDurations(work time.Duration, shortBreak time.Duration, longBreak time.Duration) 
+        + SetCallbacks(onStateChange <font color=blue>func</font>(ClockState) , onTick <font color=blue>func</font>(time.Duration) , onComplete <font color=blue>func</font>(ClockState) ) 
+        + Start() error
+        + Pause() error
+        + Stop() error
+        + Skip() error
+        + GetState() ClockState
+        + GetCurrentSession() int
+        + GetTotalSessions() int
+        + GetTimeRemaining() time.Duration
+        + GetFormattedTimeRemaining() string
+        + IsRunning() bool
+        + IsPaused() bool
+        + IsIdle() bool
+        + GetStatistics() (int, int, int)
+        + GetTimingStatistics() (time.Duration, time.Duration, time.Duration)
+        + GetSessionHistory() []SessionRecord
+        + GetRecentSessions(count int) []SessionRecord
+        + GetTodaySessions() []SessionRecord
+        + GetWeeklyStats() (int, int, int, time.Duration, time.Duration)
+        + GetAverageSessionDuration() time.Duration
+        + GetProductivityScore() float64
+        + ResetStatistics() 
+        + SetSchedule(schedule []ClockState) error
+        + GetSchedule() []ClockState
+        + GetScheduleSummary() <font color=blue>map</font>[ClockState]int
+
+    }
+    class ClockUtils << (S,Aquamarine) >> {
+        + IsValidDuration(d time.Duration) bool
+        + GetRecommendedDurations() <font color=blue>map</font>[string]time.Duration
+        + CalculateSessionProgress(elapsed time.Duration, total time.Duration) float64
+        + EstimateCompletionTime(remaining time.Duration) time.Time
+        + IsSessionComplete(elapsed time.Duration, total time.Duration) bool
+        + GetTimeUntilNextSession(currentTime time.Time, nextSessionTime time.Time) time.Duration
+        + FormatSessionInfo(state ClockState, sessionNum int, totalSessions int, duration time.Duration) string
+        + ValidateSchedule(schedule []ClockState) error
+        + GetScheduleSummary(schedule []ClockState) <font color=blue>map</font>[ClockState]int
+
+    }
+    class SessionManager << (S,Aquamarine) >> {
+        - mu sync.RWMutex
+        - workDuration time.Duration
+        - shortBreakDuration time.Duration
+        - longBreakDuration time.Duration
+        - schedule []ClockState
+        - currentSession int
+
+        + SetDurations(work time.Duration, shortBreak time.Duration, longBreak time.Duration) 
+        + GetCurrentSession() int
+        + GetTotalSessions() int
+        + GetCurrentSessionState() ClockState
+        + GetCurrentSessionDuration() time.Duration
+        + NextSession() bool
+        + ResetSessions() 
+        + IsLastSession() bool
+        + GetSessionInfo() (ClockState, int, int, time.Duration)
+        + GetSchedule() []ClockState
+        + SetSchedule(schedule []ClockState) error
+
+    }
+    class SessionRecord << (S,Aquamarine) >> {
+        + State ClockState
+        + Duration time.Duration
+        + Completed time.Time
+
+    }
+    class StateManager << (S,Aquamarine) >> {
+        - mu sync.RWMutex
+        - state ClockState
+
+        + GetState() ClockState
+        + SetState(state ClockState) 
+        + IsIdle() bool
+        + IsRunning() bool
+        + IsPaused() bool
+        + CanStart() bool
+        + CanPause() bool
+        + CanStop() bool
+        + CanSkip() bool
+        + ValidateTransition(newState ClockState) error
+
+    }
+    class StatisticsManager << (S,Aquamarine) >> {
+        - mu sync.RWMutex
+        - totalWorkSessions int
+        - totalShortBreaks int
+        - totalLongBreaks int
+        - totalWorkTime time.Duration
+        - totalBreakTime time.Duration
+        - totalSessionTime time.Duration
+        - sessionHistory []SessionRecord
+
+        + RecordSession(state ClockState, duration time.Duration) 
+        + GetStatistics() (int, int, int)
+        + GetTimingStatistics() (time.Duration, time.Duration, time.Duration)
+        + GetSessionHistory() []SessionRecord
+        + GetRecentSessions(count int) []SessionRecord
+        + GetSessionsByState(state ClockState) []SessionRecord
+        + GetTodaySessions() []SessionRecord
+        + GetWeeklyStats() (int, int, int, time.Duration, time.Duration)
+        + ResetStatistics() 
+        + GetAverageSessionDuration() time.Duration
+        + GetProductivityScore() float64
+
+    }
+    class TimeFormatter << (S,Aquamarine) >> {
+        + FormatDuration(d time.Duration) string
+        + FormatDurationLong(d time.Duration) string
+        + FormatTimeRemaining(remaining time.Duration) string
+        + ParseDurationString(s string) (time.Duration, error)
+        + FormatDurationString(d time.Duration) string
+
+    }
+    class TimerManager << (S,Aquamarine) >> {
+        - mu sync.RWMutex
+        - timer *time.Timer
+        - ticker *time.Ticker
+        - ctx context.Context
+        - cancel context.CancelFunc
+        - startTime time.Time
+        - pauseTime time.Time
+        - timeRemaining time.Duration
+        - sessionDuration time.Duration
+        - currentState ClockState
+        - onTick <font color=blue>func</font>(time.Duration) 
+        - onComplete <font color=blue>func</font>(ClockState) 
+
+        - stopTimer() 
+        - tickerLoop() 
+        - handleSessionComplete() 
+
+        + StartTimer(duration time.Duration, state ClockState, onTick <font color=blue>func</font>(time.Duration) , onComplete <font color=blue>func</font>(ClockState) ) 
+        + PauseTimer() time.Duration
+        + ResumeTimer() 
+        + StopTimer() 
+        + GetTimeRemaining() time.Duration
+        + IsRunning() bool
+
+    }
+    class clock.ClockState << (T, #FF7700) >>  {
+    }
+}
+
+
+namespace main {
+    class Config << (S,Aquamarine) >> {
+        + PomodoroSetting PomodoroSetting
+
+        - init() 
+        - routes() http.Handler
+
+    }
+    class PomodoroSetting << (S,Aquamarine) >> {
+        + WorkTimeDuration int
+        + ShortBreakDuration int
+        + LongBreakDuration int
+        + Scheduling string
+
+    }
+    class SystemHandler << (S,Aquamarine) >> {
+        + GetSystemState(w http.ResponseWriter, r *http.Request) 
+        + StartNewPomodoro(w http.ResponseWriter, r *http.Request) 
+
+    }
+}
+
+
+namespace test {
+    class StateTracker << (S,Aquamarine) >> {
+        - states []clock.ClockState
+        - completions []clock.ClockState
+        - ticks []time.Duration
+
+        + OnStateChange(state clock.ClockState) 
+        + OnTick(remaining time.Duration) 
+        + OnComplete(completedState clock.ClockState) 
+        + GetStates() []clock.ClockState
+        + GetCompletions() []clock.ClockState
+        + GetTicks() []time.Duration
+        + CountState(state clock.ClockState) int
+        + CountCompletion(state clock.ClockState) int
+        + AssertStateSequence(t *testing.T, expected []clock.ClockState) 
+
+    }
+    class TestClockRunner << (S,Aquamarine) >> {
+        - t *testing.T
+
+        + AssertState(expected clock.ClockState) 
+        + AssertTimeRemaining(min time.Duration, max time.Duration) 
+        + AssertSession(expected int) 
+        + WaitForState(expected clock.ClockState, timeout time.Duration) bool
+        + WaitForSession(expected int, timeout time.Duration) bool
+        + CompleteSession() 
+        + RunCompleteCycle() (int, int, int)
+
+    }
+    class TestScenario << (S,Aquamarine) >> {
+        + Name string
+        + Setup <font color=blue>func</font>(*TestClockRunner) 
+        + Actions <font color=blue>func</font>(*TestClockRunner) 
+        + Assertions <font color=blue>func</font>(*TestClockRunner, *StateTracker) 
+        + Duration time.Duration
+
+    }
+}
+"clock.ClockRunner" *-- "test.TestClockRunner"
+
+
+"__builtin__.string" #.. "clock.ClockState"
+@enduml

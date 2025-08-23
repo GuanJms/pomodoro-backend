@@ -18,7 +18,7 @@ package "Redis" {
         longBreakTime : int
         workTime : int
         shortBreakTime : int
-        sessionSequence : string
+        scheduling : string
     }
 
     class systemState <<hash>> {

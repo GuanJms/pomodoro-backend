@@ -1,11 +1,12 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"discord.enabled": false,
-		"plantuml.exportOutDir": "./"
-	}
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "discord.enabled": false,
+    "plantuml.exportOutDir": "./",
+    "makefile.configureOnOpen": false
+  }
 }

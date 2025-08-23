@@ -114,8 +114,8 @@ components:
           description: this is measured in min
         scheduling:
           type: string
-          default: W-SB-W-SB-W-SB-W-LB
-          description: Scheudling string format - e.g. W-SB-W-SB-W-SB-W-LB
+          default: working-short_break-working-short_break-working-long_break
+          description: Scheudling string format - e.g. working-short_break-working-short_break-working-long_break
       
     NewUser:
       type: object

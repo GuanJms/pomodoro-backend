@@ -23,10 +23,10 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	systemStateHandler := SystemHandler{}
+	clockHandler := ClockHandler{clockRunner: app.ClockRunner}
 
-	mux.Get("/system/state", systemStateHandler.GetSystemState)
-	mux.Post("/system/start", systemStateHandler.StartNewPomodoro)
+	mux.Get("/system/state", clockHandler.GetSystemState)
+	mux.Post("/system/start", clockHandler.StartNewPomodoro)
 
 	return mux
 }
