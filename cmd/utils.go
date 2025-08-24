@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"pomodoroService/internal/clock"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,18 +20,18 @@ type PomodoroSetting struct {
 }
 
 func defaultPomodoroSetting() PomodoroSetting {
-	// workTimeDuration, _ := strconv.Atoi(os.Getenv("WORK_TIME_DURATION"))
-	// shortBreakDuration, _ := strconv.Atoi(os.Getenv("SHORT_BREAK_DURATION"))
-	// longBreakDuration, _ := strconv.Atoi(os.Getenv("LONG_BREAK_DURATION"))
-	// scheduling := os.Getenv("SCHEDULING")
+	workTimeDuration, _ := strconv.Atoi(os.Getenv("WORK_TIME_DURATION"))
+	shortBreakDuration, _ := strconv.Atoi(os.Getenv("SHORT_BREAK_DURATION"))
+	longBreakDuration, _ := strconv.Atoi(os.Getenv("LONG_BREAK_DURATION"))
+	schedulingString := os.Getenv("SCHEDULING")
 
 	// workTimeDuration := 25
 	// shortBreakDuration := 5
 	// longBreakDuration := 15
-	workTimeDuration := 1
-	shortBreakDuration := 1
-	longBreakDuration := 1
-	schedulingString := `W-SB-W-SB-W-LB`
+	// workTimeDuration := 1
+	// shortBreakDuration := 1
+	// longBreakDuration := 1
+	// schedulingString := `W-SB-W-SB-W-LB`
 	scheduling, err := clock.ParseScheduling(schedulingString)
 	if err != nil {
 		log.Fatalf("failed to parse scheduling: %v", err)

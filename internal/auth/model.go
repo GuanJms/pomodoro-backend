@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -15,8 +16,9 @@ const (
 	// JWT expiration time - 24 hours
 	jwtExpirationHours = 24
 	// JWT secret key (in production, this should be from environment variable) from .env file
-	jwtSecretKey = "your-secret-key-change-in-production"
 )
+
+var jwtSecretKey = os.Getenv("JWT_SECRET")
 
 // Context keys for storing user information
 type contextKey string

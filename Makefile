@@ -17,8 +17,13 @@ up_build: build_pomodoro_service
 
 build_pomodoro_service:
 	@echo "Building pomodoro service..."
-	env GOOS=linux CGO_ENABLED=0 go build -o ${POMODORO_BINARY} ./cmd/main.go
+	env GOOS=linux CGO_ENABLED=0 go build -o ${POMODORO_BINARY} ./cmd
 	@echo "Pomodoro service built!"
+
+down:
+	@echo "Stopping docker images (if running...)"
+	docker-compose down
+	@echo "Docker images stopped!"
 
 test:
 	@echo "Running unit tests..."
@@ -49,7 +54,7 @@ clean:
 	@echo "Cleanup complete!"
 
 
-.PHONY: uml clean
+.PHONY: uml clean_uml
 
 uml: $(PNG)
 
@@ -62,7 +67,7 @@ $(PUML):
 	@mkdir -p $(UML_DIR)
 	@goplantuml -recursive ./ > $(PUML)
 
-clean:
+clean_uml:
 	@rm -f $(PUML) $(PNG)
 
 

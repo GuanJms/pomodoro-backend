@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"pomodoroService/internal/auth"
 	"pomodoroService/internal/clock"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var webPort = "8080"             // os.Getenv("WEB_PORT") or default
-var redisAddr = "localhost:6379" // os.Getenv("REDIS_ADDR") or default
-var dsn = "postgres://user:password@localhost:5435/pomodoro_db?sslmode=disable"
+// var webPort = "8080"             // os.Getenv("WEB_PORT") or default
+// var redisAddr = "localhost:6379" // os.Getenv("REDIS_ADDR") or default
+// var dsn = "postgres://user:password@localhost:5435/pomodoro_db?sslmode=disable"
+
+var webPort = os.Getenv("WEB_PORT")
+var redisAddr = os.Getenv("REDIS_ADDR")
+var dsn = os.Getenv("DSN")
 
 type Config struct {
 	PomodoroSetting PomodoroSetting
