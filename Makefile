@@ -64,3 +64,41 @@ $(PUML):
 
 clean:
 	@rm -f $(PUML) $(PNG)
+
+
+generate_sqlc:
+	@echo "Generate pomodoro-service sqlc file"
+	sqlc generate
+	@echo "Done!"
+
+# Database management targets
+db_up:
+	@echo "Starting database services..."
+	docker-compose up -d postgres redis
+	@echo "Database services started!"
+
+db_down:
+	@echo "Stopping database services..."
+	docker-compose down
+	@echo "Database services stopped!"
+
+db_reset:
+	@echo "Resetting database (WARNING: This will delete all data)..."
+	docker-compose down
+	@echo "Removing database data..."
+	sudo rm -rf db-data/
+	@echo "Starting fresh database..."
+	docker-compose up -d postgres redis
+	@echo "Database reset complete!"
+
+db_logs:
+	@echo "Showing database logs..."
+	docker-compose logs -f postgres
+
+db_connect:
+	@echo "Connecting to database..."
+	docker-compose exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+db_migrate:
+	@echo "Running database migrations..."
+	docker-compose exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -f /docker-entrypoint-initdb.d/schema.sql

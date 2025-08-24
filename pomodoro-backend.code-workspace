@@ -2,6 +2,9 @@
   "folders": [
     {
       "path": "."
+    },
+    {
+      "path": "../pomodoro-frontend-local"
     }
   ],
   "settings": {

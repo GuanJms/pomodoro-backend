@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database data (should be in volumes)
+db-data/
+
+# Environment files (sensitive data)
+.env
+
+# Documentation
+README.md
+README.pdf
+docs/
+
+# Tests
+test/
+coverage.out
+coverage.html
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go specific
+*.test
+*.out
+vendor/
+
+# Node modules (if any)
+node_modules/

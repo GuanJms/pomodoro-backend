@@ -38,12 +38,6 @@ paths:
       summary: start a new pomodoro state
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PomodoroSetting'
       responses:
         '200':
           description: successfully started a new pomodoro state
@@ -52,7 +46,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PomodoroSetting'
 
-  /users/login:
+  /auth/login:
     post:
       summary: Existing user login
       requestBody:
@@ -73,7 +67,7 @@ paths:
         '409':
           description: User already exists
     
-  /users/register:
+  /auth/register:
     post:
       summary: Register a new user
       requestBody:
@@ -94,6 +88,47 @@ paths:
         '409':
           description: User already exists
 
+  /auth/register-admin:
+    post:
+      summary: Register a new admin user (development/testing only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUser'
+      responses:
+        '201':
+          description: Admin user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          description: Bad request of JSON
+        '409':
+          description: User already exists
+
+  /auth/profile:
+    get:
+      summary: Get user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  role:
+                    type: string
+                    enum: [USER, ADMIN]
+        '401':
+          description: Unauthorized
 
 components:
   schemas:
@@ -114,8 +149,8 @@ components:
           description: this is measured in min
         scheduling:
           type: string
-          default: working-short_break-working-short_break-working-long_break
-          description: Scheudling string format - e.g. working-short_break-working-short_break-working-long_break
+          default: W-SB-W-SB-W-LB
+          description: Scheduling string format - e.g. W-SB-W-SB-W-LB
       
     NewUser:
       type: object

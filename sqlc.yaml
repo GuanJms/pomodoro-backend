@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema:
+      - "./scripts/postgres/schema.sql"
+    queries: "./internal/auth/query"
+    gen:
+      go:
+        package: "authdb"
+        out: "./internal/auth/gen"
+        sql_package: "pgx/v5"
+        emit_db_tags: true
+        emit_json_tags: false

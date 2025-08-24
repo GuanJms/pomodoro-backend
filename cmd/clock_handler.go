@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"pomodoroService/internal/clock"
 	"time"
 )
+
+func NewClockHandler(clockRunner *clock.ClockRunner) *ClockHandler {
+	return &ClockHandler{clockRunner: clockRunner}
+}
 
 type ClockHandler struct {
 	clockRunner *clock.ClockRunner
@@ -45,11 +48,11 @@ func (h *ClockHandler) GetSystemState(w http.ResponseWriter, r *http.Request) {
 	currentSession := 0
 	if redisError == nil && redisState != nil {
 		currentSession = redisState.CurrentSession
-		log.Printf("📊 API using Redis currentSession: %d", currentSession)
+		// log.Printf("📊 API using Redis currentSession: %d", currentSession)
 	} else {
 		// Fallback to in-memory value if Redis fails
 		currentSession = h.clockRunner.GetCurrentSession()
-		log.Printf("📊 API using in-memory currentSession: %d (Redis error: %v)", currentSession, redisError)
+		// log.Printf("📊 API using in-memory currentSession: %d (Redis error: %v)", currentSession, redisError)
 	}
 
 	// Get the end time from Redis directly to avoid recalculation inconsistencies
@@ -57,16 +60,16 @@ func (h *ClockHandler) GetSystemState(w http.ResponseWriter, r *http.Request) {
 	if h.clockRunner.IsIdle() {
 		// For idle state, use 24 hours from now
 		endTime = now.Add(24 * time.Hour)
-		log.Printf("📊 API using calculated endTime for idle: %s", endTime.Format(time.RFC3339))
+		// log.Printf("📊 API using calculated endTime for idle: %s", endTime.Format(time.RFC3339))
 	} else {
 		// For active states, get the exact end time from Redis
 		if redisError == nil && redisState != nil && !redisState.EndTime.IsZero() {
 			endTime = redisState.EndTime
-			log.Printf("📊 API using Redis endTime: %s", endTime.Format(time.RFC3339))
+			// log.Printf("📊 API using Redis endTime: %s", endTime.Format(time.RFC3339))
 		} else {
 			// Fallback to calculation if Redis load fails
 			endTime = now.Add(h.clockRunner.GetTimeRemaining())
-			log.Printf("📊 API using calculated endTime (Redis error: %v): %s", redisError, endTime.Format(time.RFC3339))
+			// log.Printf("📊 API using calculated endTime (Redis error: %v): %s", redisError, endTime.Format(time.RFC3339))
 		}
 	}
 
