@@ -98,7 +98,7 @@ func (sm *SessionManager) NextSession() bool {
 	if sm.currentSession >= len(sm.schedule) {
 		// Completed all sessions, reset
 		sm.currentSession = 0
-		return false // Indicates cycle completion
+		// return false // Indicates cycle completion - clock is running forever
 	}
 	return true // Indicates more sessions available
 }

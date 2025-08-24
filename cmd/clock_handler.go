@@ -26,6 +26,7 @@ type SystemStateResponse struct {
 	CurrentSession int    `json:"currentSession"`
 	EndTime        string `json:"endTime"`
 	ServerTime     string `json:"serverTime"`
+	IsActive       bool   `json:"isActive"`
 }
 
 func (h *ClockHandler) GetSystemState(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +90,7 @@ func (h *ClockHandler) GetSystemState(w http.ResponseWriter, r *http.Request) {
 	// Set times
 	response.EndTime = endTime.Format(time.RFC3339)
 	response.ServerTime = now.Format(time.RFC3339)
+	response.IsActive = h.clockRunner.IsRunning()
 
 	// Set response headers
 	w.Header().Set("Content-Type", "application/json")

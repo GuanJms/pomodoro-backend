@@ -36,6 +36,7 @@ func NewTimerManager() *TimerManager {
 
 // StartTimer starts the timer for a session
 func (tm *TimerManager) StartTimer(duration time.Duration, state ClockState, onTick func(time.Duration), onComplete func(ClockState)) {
+	log.Printf("▶️ Timer StartTimer: duration=%v, state=%v", duration, state)
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -56,9 +57,11 @@ func (tm *TimerManager) StartTimer(duration time.Duration, state ClockState, onT
 	tm.timer = time.AfterFunc(duration, func() {
 		tm.handleSessionComplete()
 	})
+	log.Printf("Setted up timer: %v", tm.timer)
 
 	// Start the ticker for periodic updates (every 100ms for more responsive updates)
 	tm.ticker = time.NewTicker(100 * time.Millisecond)
+	log.Printf("Setted up ticker: %v", tm.ticker)
 	go tm.tickerLoop()
 }
 
@@ -180,6 +183,7 @@ func (tm *TimerManager) stopTimer() {
 		tm.cancel()
 		tm.cancel = nil
 	}
+	log.Printf("▶️ Timer ticker and cancel stopped")
 }
 
 // tickerLoop runs the ticker loop for periodic updates
@@ -212,6 +216,8 @@ func (tm *TimerManager) handleSessionComplete() {
 		tm.ticker.Stop()
 		tm.ticker = nil
 	}
+
+	log.Printf("▶️ Timer handleSessionComplete")
 
 	// Call completion callback while still holding the lock
 	if tm.onComplete != nil {

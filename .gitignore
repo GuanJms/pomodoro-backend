@@ -20,6 +20,8 @@ coverage.txt
 # Go workspace file
 go.work
 
+db-data/
+
 # Dependency directories
 vendor/
 

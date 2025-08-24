@@ -25,6 +25,8 @@ paths:
                 properties:
                   pomodoroSetting:
                     $ref: '#/components/schemas/PomodoroSetting'
+                  isActive:
+                    type: boolean
                   currentSession:
                     type: number
                   endTime:

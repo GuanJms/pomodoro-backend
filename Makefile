@@ -8,16 +8,21 @@ up:
 	@echo "Docker images started!"
 
 
-up_build: build_pomodoro_service
+up_build: build_pomodoro_service_arm64
 	@echo "Stopping docker images (if running...)"
 	docker-compose down
 	@echo "Building (when required) and starting docker images..."
 	docker-compose up --build -d
 	@echo "Docker images built and started!"
 
-build_pomodoro_service:
+build_pomodoro_service_arm64:
 	@echo "Building pomodoro service..."
-	env GOOS=linux CGO_ENABLED=0 go build -o ${POMODORO_BINARY} ./cmd
+	env GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ${POMODORO_BINARY} ./cmd
+	@echo "Pomodoro service built!"
+
+build_pomodoro_service_amd64:
+	@echo "Building pomodoro service..."
+	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ${POMODORO_BINARY} ./cmd
 	@echo "Pomodoro service built!"
 
 down:
@@ -107,3 +112,19 @@ db_connect:
 db_migrate:
 	@echo "Running database migrations..."
 	docker-compose exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -f /docker-entrypoint-initdb.d/schema.sql
+
+build_docker_image_push_arm64: build_pomodoro_service_arm64
+	@echo "Building docker image..."
+	docker buildx build --platform linux/arm64 -t jamesguan777/pomodoro-backend:latest .
+	@echo "Docker image built!"
+	@echo "Pushing docker image to docker hub..."
+	docker push jamesguan777/pomodoro-backend:latest
+	@echo "Docker image pushed to docker hub!"
+
+build_docker_image_push_amd64: build_pomodoro_service_amd64
+	@echo "Building docker image..."
+	docker buildx build --platform linux/amd64 -t jamesguan777/pomodoro-backend_amd64:latest .
+	@echo "Docker image built!"
+	@echo "Pushing docker image to docker hub..."
+	docker push jamesguan777/pomodoro-backend_amd64:latest
+	@echo "Docker image pushed to docker hub!"

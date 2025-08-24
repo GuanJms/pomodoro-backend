@@ -249,10 +249,13 @@ func (cr *ClockRunner) Skip() error {
 
 // startNewSession starts a new session
 func (cr *ClockRunner) startNewSession() {
+	log.Printf("▶️ startNewSession")
 	state := cr.sessionManager.GetCurrentSessionState()
 	duration := cr.sessionManager.GetCurrentSessionDuration()
+	log.Printf("▶️ startNewSession: state=%v, duration=%v", state, duration)
 
 	cr.stateManager.SetState(state)
+	log.Printf("▶️ startNewSession: state=%v", cr.stateManager.GetState())
 
 	// Reset tick counter for new session
 	cr.tickCounter = 0
@@ -265,6 +268,7 @@ func (cr *ClockRunner) startNewSession() {
 	}
 
 	onComplete := func(completedState ClockState) {
+		log.Printf("▶️ onComplete")
 		// Record the completed session
 		cr.statsManager.RecordSession(completedState, duration)
 
@@ -299,6 +303,7 @@ func (cr *ClockRunner) startNewSession() {
 	}
 
 	// Start the timer
+	log.Printf("▶️ Starting timer with duration: %v, state: %v", duration, state)
 	cr.timerManager.StartTimer(duration, state, onTick, onComplete)
 
 	// Log session start
@@ -352,14 +357,7 @@ func (cr *ClockRunner) GetFormattedTimeRemaining() string {
 func (cr *ClockRunner) IsRunning() bool {
 	// Check both state and timer status - no lock needed for reading
 	stateRunning := cr.stateManager.IsRunning()
-	timerRunning := cr.timerManager.IsRunning()
-
-	// Log inconsistency for debugging
-	if stateRunning != timerRunning {
-		log.Printf("⚠️ State/timer inconsistency: state running=%v, timer running=%v", stateRunning, timerRunning)
-	}
-
-	return stateRunning && timerRunning
+	return stateRunning
 }
 
 // IsPaused returns true if the clock is paused

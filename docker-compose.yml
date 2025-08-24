@@ -2,9 +2,10 @@ version: "3"
 
 services:
   pomodoro-service:
+    # image: jamesguan777/pomodoro-backend:latest
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
     restart: always
     deploy:
       mode: replicated
@@ -13,7 +14,6 @@ services:
       - "8080:8080"
     env_file:
       - .env
-
 
   postgres:
     image: "postgres:16"
