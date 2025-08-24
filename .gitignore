@@ -1,2 +1,86 @@
+# Environment files
 .env
+.env.local
 
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+pomodoroApp
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Go module cache
+go.sum.bak
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker files
+docker-compose.override.yml
+docker-compose.*.yml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+db-data/
+postgres-data/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+tmp/
+temp/
+
+# Node modules (if any frontend files)
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# Certificate files
+*.pem
+*.key
+*.crt
+
+# Redis dump files
+dump.rdb
+
+# Air (Go live reload tool)
+tmp/
