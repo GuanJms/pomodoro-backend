@@ -135,7 +135,6 @@ func (h *AuthHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	// Authenticate user
 	isAuthenticated, err := h.authRepo.AuthenticateUser(&creds)
-	log.Printf("isAuthenticated: %v", isAuthenticated)
 	if err != nil {
 		log.Printf("Authentication error: %v", err)
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Authentication failed", "Internal server error")

@@ -4,7 +4,7 @@
       "path": "."
     },
     {
-      "path": "../pomodoro-frontend-local"
+      "path": "../pomodoro-frontend"
     }
   ],
   "settings": {

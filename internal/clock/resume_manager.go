@@ -96,7 +96,7 @@ func (rm *ResumeManager) resetToIdle(reason string) error {
 
 // resumeBasedOnState resumes the clock based on the loaded state
 func (rm *ResumeManager) resumeBasedOnState(state *SystemState) error {
-	log.Printf("🔄 Resuming from Redis state - Session: %d, State: '%s', Running: %v, Paused: %v, TimeRemaining: %dms",
+	log.Printf("🔄 ResumeManager: resumeBasedOnState: Session: %d, State: '%s', Running: %v, Paused: %v, TimeRemaining: %dms",
 		state.CurrentSession, state.State, state.IsRunning, state.IsPaused, state.TimeRemaining)
 
 	// Synchronize state and timer before resuming
@@ -191,11 +191,11 @@ func (rm *ResumeManager) resumeRunningSession(state *SystemState) error {
 	clockState := ClockState(state.State)
 	rm.clockRunner.stateManager.SetState(clockState)
 
-	// Reset tick counter
-	rm.clockRunner.tickCounter = 0
+	// Reset tick counter (no longer needed with new approach)
 
 	// Calculate remaining time (from milliseconds)
-	remainingTime := time.Duration(state.TimeRemaining) * time.Millisecond
+	endTime := state.EndTime
+	remainingTime := endTime.Sub(time.Now())
 
 	// Handle case where session has completed while server was down
 	if remainingTime <= 0 {
@@ -210,6 +210,9 @@ func (rm *ResumeManager) resumeRunningSession(state *SystemState) error {
 	if err != nil {
 		return err
 	}
+
+	// Start periodic Redis saves for resumed running session
+	rm.clockRunner.runSaveStateToRedis()
 
 	// Ensure the resumed state is saved to Redis with updated end time
 	rm.clockRunner.saveStateToRedis()
@@ -229,11 +232,9 @@ func (rm *ResumeManager) resumePausedSession(state *SystemState) error {
 	// Get the session state for timer setup
 	sessionState := ClockState(state.State)
 
-	// Reset tick counter
-	rm.clockRunner.tickCounter = 0
-
 	// Calculate remaining time (from milliseconds)
-	remainingTime := time.Duration(state.TimeRemaining) * time.Millisecond
+	endTime := state.EndTime
+	remainingTime := endTime.Sub(time.Now())
 
 	// If there's time remaining, start the timer but pause it immediately
 	if remainingTime > 0 {
@@ -246,6 +247,9 @@ func (rm *ResumeManager) resumePausedSession(state *SystemState) error {
 	} else {
 		log.Printf("⚠️ No time remaining for paused session, will complete when resumed")
 	}
+
+	// Start periodic Redis saves for resumed paused session
+	rm.clockRunner.runSaveStateToRedis()
 
 	return nil
 }
@@ -261,11 +265,11 @@ func (rm *ResumeManager) resumeInterruptedSession(state *SystemState) error {
 	clockState := ClockState(state.State)
 	rm.clockRunner.stateManager.SetState(StatePaused) // Treat as paused for safety
 
-	// Reset tick counter
-	rm.clockRunner.tickCounter = 0
+	// Reset tick counter (no longer needed with new approach)
 
 	// Calculate remaining time (from milliseconds)
-	remainingTime := time.Duration(state.TimeRemaining) * time.Millisecond
+	endTime := state.EndTime
+	remainingTime := endTime.Sub(time.Now())
 
 	// If there's time remaining, set up the timer but keep it paused
 	if remainingTime > 0 {
@@ -286,6 +290,9 @@ func (rm *ResumeManager) resumeInterruptedSession(state *SystemState) error {
 			rm.clockRunner.timerManager.PauseTimer()
 		}
 	}
+
+	// Start periodic Redis saves for resumed interrupted session
+	rm.clockRunner.runSaveStateToRedis()
 
 	return nil
 }
@@ -327,15 +334,14 @@ func (rm *ResumeManager) handleCompletedSession(completedState ClockState) {
 
 // startTimerWithCallbacks starts the timer with proper callbacks
 func (rm *ResumeManager) startTimerWithCallbacks(remainingTime time.Duration, clockState ClockState) error {
+	log.Printf("▶️ ResumeManager: startTimerWithCallbacks: remainingTime=%v, clockState=%v", remainingTime, clockState)
 	if remainingTime <= 0 {
 		return fmt.Errorf("remaining time must be positive, got %v", remainingTime)
 	}
 
 	// Set up timer callbacks
 	onTick := func(remaining time.Duration) {
-		if rm.clockRunner.onTick != nil {
-			rm.clockRunner.onTick(remaining)
-		}
+		onTick(rm.clockRunner, remaining)
 	}
 
 	onComplete := func(completedState ClockState) {

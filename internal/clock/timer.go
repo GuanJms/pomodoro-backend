@@ -2,7 +2,6 @@ package clock
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 )
@@ -27,6 +26,9 @@ type TimerManager struct {
 	// Callbacks
 	onTick     func(time.Duration)
 	onComplete func(ClockState)
+
+	// Track if we're in completion process
+	isCompleting bool
 }
 
 // NewTimerManager creates a new timer manager
@@ -36,7 +38,6 @@ func NewTimerManager() *TimerManager {
 
 // StartTimer starts the timer for a session
 func (tm *TimerManager) StartTimer(duration time.Duration, state ClockState, onTick func(time.Duration), onComplete func(ClockState)) {
-	log.Printf("▶️ Timer StartTimer: duration=%v, state=%v", duration, state)
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -50,6 +51,9 @@ func (tm *TimerManager) StartTimer(duration time.Duration, state ClockState, onT
 	tm.onTick = onTick
 	tm.onComplete = onComplete
 
+	// Reset completion flag when starting a new timer
+	tm.isCompleting = false
+
 	// Create context for cancellation
 	tm.ctx, tm.cancel = context.WithCancel(context.Background())
 
@@ -57,11 +61,9 @@ func (tm *TimerManager) StartTimer(duration time.Duration, state ClockState, onT
 	tm.timer = time.AfterFunc(duration, func() {
 		tm.handleSessionComplete()
 	})
-	log.Printf("Setted up timer: %v", tm.timer)
 
 	// Start the ticker for periodic updates (every 100ms for more responsive updates)
 	tm.ticker = time.NewTicker(100 * time.Millisecond)
-	log.Printf("Setted up ticker: %v", tm.ticker)
 	go tm.tickerLoop()
 }
 
@@ -81,7 +83,6 @@ func (tm *TimerManager) PauseTimer() time.Duration {
 	// Stop the timer and ticker
 	tm.stopTimer()
 
-	log.Printf("⏸️ Timer paused with %v remaining", tm.timeRemaining)
 	return tm.timeRemaining
 }
 
@@ -91,7 +92,6 @@ func (tm *TimerManager) ResumeTimer() {
 	defer tm.mu.Unlock()
 
 	if tm.timeRemaining <= 0 {
-		log.Printf("⚠️ Cannot resume timer: no time remaining")
 		return
 	}
 
@@ -122,7 +122,6 @@ func (tm *TimerManager) ResumeTimer() {
 	tm.ticker = time.NewTicker(100 * time.Millisecond)
 	go tm.tickerLoop()
 
-	log.Printf("▶️ Timer resumed with %v remaining", tm.timeRemaining)
 }
 
 // StopTimer stops the timer completely
@@ -183,7 +182,10 @@ func (tm *TimerManager) stopTimer() {
 		tm.cancel()
 		tm.cancel = nil
 	}
-	log.Printf("▶️ Timer ticker and cancel stopped")
+
+	// Reset completion flag when stopping timer
+	tm.isCompleting = false
+
 }
 
 // tickerLoop runs the ticker loop for periodic updates
@@ -197,7 +199,7 @@ func (tm *TimerManager) tickerLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			if tm.onTick != nil && tm.timer != nil {
+			if tm.onTick != nil {
 				remaining := tm.GetTimeRemaining()
 				tm.onTick(remaining)
 			}
@@ -211,13 +213,19 @@ func (tm *TimerManager) tickerLoop() {
 func (tm *TimerManager) handleSessionComplete() {
 	tm.mu.Lock()
 
-	// Stop the ticker
+	// Mark that we're in completion process
+	tm.isCompleting = true
+
+	// Stop the ticker and cancel context to ensure tickerLoop exits
 	if tm.ticker != nil {
 		tm.ticker.Stop()
 		tm.ticker = nil
 	}
 
-	log.Printf("▶️ Timer handleSessionComplete")
+	if tm.cancel != nil {
+		tm.cancel()
+		tm.cancel = nil
+	}
 
 	// Call completion callback while still holding the lock
 	if tm.onComplete != nil {
@@ -228,8 +236,12 @@ func (tm *TimerManager) handleSessionComplete() {
 	}
 
 	// Reset timer state after completion logic has run
-	tm.timer = nil
-	tm.timeRemaining = 0
+	// Only if we're still in completion process (no new timer was started)
+	if tm.isCompleting {
+		tm.timer = nil
+		tm.timeRemaining = 0
+		tm.isCompleting = false
+	}
 
 	tm.mu.Unlock()
 }

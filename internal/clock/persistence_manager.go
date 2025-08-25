@@ -107,6 +107,8 @@ func (pm *PersistenceManager) SaveSystemStateToRedis() error {
 		state.CurrentSession, state.State, state.TimeRemaining, state.IsRunning, state.IsPaused,
 		state.EndTime.Format("15:04:05"))
 
+	log.Printf("Checking state manager is running: %v", pm.clockRunner.stateManager.IsRunning())
+	log.Printf("Checking if timer is running: %v", pm.clockRunner.timerManager.IsRunning())
 	return pm.clockRunner.redisPersistence.SaveSystemState(state)
 }
 

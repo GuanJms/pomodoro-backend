@@ -82,6 +82,18 @@ generate_sqlc:
 	@echo "Done!"
 
 # Database management targets
+
+pomodoro_up: build_pomodoro_service_arm64
+	@echo "Starting pomodoro service..."
+	docker-compose up --build -d pomodoro-service
+	@echo "Pomodoro service started!"
+
+pomodoro_down: 
+	@echo "Stopping pomodoro service..."
+	docker-compose down pomodoro-service
+	@echo "Pomodoro service stopped!"
+
+
 db_up:
 	@echo "Starting database services..."
 	docker-compose up -d postgres redis

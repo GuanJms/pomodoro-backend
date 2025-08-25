@@ -45,8 +45,9 @@ type ClockRunner struct {
 	persistenceManager *PersistenceManager
 	resumeManager      *ResumeManager
 
-	// Tick counter for Redis persistence
-	tickCounter int
+	// Redis save control
+	redisSaveTicker *time.Ticker
+	redisSaveStop   chan struct{}
 
 	// Callbacks
 	onStateChange func(ClockState)
@@ -142,12 +143,16 @@ func (cr *ClockRunner) Start() error {
 		log.Printf("Starting new session from idle state")
 		cr.sessionManager.ResetSessions()
 		cr.startNewSession()
+		// Start periodic Redis saves when starting a new session
+		cr.runSaveStateToRedis()
 	} else if cr.stateManager.IsPaused() {
 		log.Printf("Resuming from paused state")
 		// Resume from pause
 		state := cr.sessionManager.GetCurrentSessionState()
 		cr.stateManager.SetState(state)
 		cr.timerManager.ResumeTimer()
+		// Start periodic Redis saves when resuming
+		cr.runSaveStateToRedis()
 	}
 
 	// Save state to Redis
@@ -191,6 +196,9 @@ func (cr *ClockRunner) Stop() error {
 	cr.stateManager.SetState(StateIdle)
 	cr.sessionManager.ResetSessions()
 	cr.timerManager.StopTimer()
+
+	// Stop periodic Redis saves
+	cr.stopSaveStateToRedis()
 
 	// Save state to Redis
 	if cr.redisPersistence != nil {
@@ -249,61 +257,23 @@ func (cr *ClockRunner) Skip() error {
 
 // startNewSession starts a new session
 func (cr *ClockRunner) startNewSession() {
-	log.Printf("▶️ startNewSession")
 	state := cr.sessionManager.GetCurrentSessionState()
 	duration := cr.sessionManager.GetCurrentSessionDuration()
-	log.Printf("▶️ startNewSession: state=%v, duration=%v", state, duration)
 
 	cr.stateManager.SetState(state)
-	log.Printf("▶️ startNewSession: state=%v", cr.stateManager.GetState())
 
-	// Reset tick counter for new session
-	cr.tickCounter = 0
+	// Reset tick counter for new session (no longer needed with new approach)
 
 	// Set up timer callbacks
 	onTick := func(remaining time.Duration) {
-		if cr.onTick != nil {
-			cr.onTick(remaining)
-		}
+		onTick(cr, remaining)
 	}
 
 	onComplete := func(completedState ClockState) {
-		log.Printf("▶️ onComplete")
-		// Record the completed session
-		cr.statsManager.RecordSession(completedState, duration)
-
-		if cr.onComplete != nil {
-			cr.onComplete(completedState)
-		}
-
-		log.Printf("Completed %s session %d/%d",
-			completedState, cr.sessionManager.GetCurrentSession(), cr.sessionManager.GetTotalSessions())
-
-		// Move to next session
-		log.Printf("Moving to next session from %d", cr.sessionManager.GetCurrentSession())
-		hasNextSession := cr.sessionManager.NextSession()
-		log.Printf("Next session available: %v, current session now: %d", hasNextSession, cr.sessionManager.GetCurrentSession())
-		if !hasNextSession {
-			// Completed all sessions - set to idle and save state
-			cr.stateManager.SetState(StateIdle)
-			if cr.onStateChange != nil {
-				cr.onStateChange(StateIdle)
-			}
-			// Save idle state to Redis immediately
-			cr.saveStateToRedis()
-			log.Println("Completed all pomodoro sessions!")
-			return
-		}
-
-		// Start next session - this will save state to Redis
-		cr.startNewSession()
-
-		// Ensure the new session state is saved to Redis immediately
-		cr.saveStateToRedis()
+		onComplete(cr, completedState, duration)
 	}
 
 	// Start the timer
-	log.Printf("▶️ Starting timer with duration: %v, state: %v", duration, state)
 	cr.timerManager.StartTimer(duration, state, onTick, onComplete)
 
 	// Log session start
@@ -321,6 +291,9 @@ func (cr *ClockRunner) startNewSession() {
 
 // Close closes the Redis connection
 func (cr *ClockRunner) Close() error {
+	// Stop periodic Redis saves
+	cr.stopSaveStateToRedis()
+
 	if cr.persistenceManager != nil {
 		return cr.persistenceManager.Close()
 	}
@@ -357,7 +330,11 @@ func (cr *ClockRunner) GetFormattedTimeRemaining() string {
 func (cr *ClockRunner) IsRunning() bool {
 	// Check both state and timer status - no lock needed for reading
 	stateRunning := cr.stateManager.IsRunning()
-	return stateRunning
+	timerRunning := cr.timerManager.IsRunning()
+	if stateRunning != timerRunning {
+		log.Print("Inconsistency detected: stateRunning != timerRunning, stateRunning: ", stateRunning, " timerRunning: ", timerRunning)
+	}
+	return stateRunning && timerRunning
 }
 
 // IsPaused returns true if the clock is paused
@@ -469,25 +446,61 @@ func (cr *ClockRunner) synchronizeStateTimer() {
 	}
 }
 
-// saveStateToRedis saves the current state to Redis with tick-based frequency control
+// saveStateToRedis saves the current state to Redis immediately
 func (cr *ClockRunner) saveStateToRedis() {
 	if cr.redisPersistence == nil {
+		log.Printf("⚠️ Cannot save to Redis: redisPersistence is nil")
 		return
 	}
 
-	// Save state to Redis (less frequently for ticks)
-	if cr.onTick != nil {
-		cr.tickCounter++
-		if cr.tickCounter >= 10 { // Every 10 ticks (1 second with 100ms intervals)
-			if err := cr.persistenceManager.SaveSystemStateToRedis(); err != nil {
-				log.Printf("Failed to save state to Redis: %v", err)
-			}
-			cr.tickCounter = 0
-		}
+	log.Printf("💾 Immediate Redis save - State: %s", cr.GetState())
+	// Always save immediately for state changes
+	if err := cr.persistenceManager.SaveSystemStateToRedis(); err != nil {
+		log.Printf("Failed to save state to Redis: %v", err)
 	} else {
-		// For state changes, always save immediately
-		if err := cr.persistenceManager.SaveSystemStateToRedis(); err != nil {
-			log.Printf("Failed to save state to Redis: %v", err)
+		log.Printf("✅ Immediate Redis save completed")
+	}
+}
+
+// runSaveStateToRedis starts a goroutine that periodically saves state to Redis
+func (cr *ClockRunner) runSaveStateToRedis() {
+	// Stop any existing goroutine first
+	cr.stopSaveStateToRedis()
+
+	cr.redisSaveTicker = time.NewTicker(3 * time.Second) // Save every 3 seconds
+	cr.redisSaveStop = make(chan struct{})
+
+	go func() {
+		log.Printf("🚀 Starting periodic Redis save goroutine")
+		for {
+			select {
+			case <-cr.redisSaveTicker.C:
+				if cr.redisPersistence != nil && !cr.IsIdle() {
+					log.Printf("🔄 Periodic Redis save - State: %s, IsIdle: %v", cr.GetState(), cr.IsIdle())
+					if err := cr.persistenceManager.SaveSystemStateToRedis(); err != nil {
+						log.Printf("Failed to save state to Redis: %v", err)
+					} else {
+						log.Printf("✅ Periodic Redis save completed")
+					}
+				} else {
+					log.Printf("⏸️ Skipping periodic Redis save - Redis: %v, IsIdle: %v", cr.redisPersistence != nil, cr.IsIdle())
+				}
+			case <-cr.redisSaveStop:
+				log.Printf("🛑 Stopping periodic Redis save goroutine")
+				return
+			}
 		}
+	}()
+}
+
+// stopSaveStateToRedis stops the periodic Redis save goroutine
+func (cr *ClockRunner) stopSaveStateToRedis() {
+	if cr.redisSaveTicker != nil {
+		cr.redisSaveTicker.Stop()
+		cr.redisSaveTicker = nil
+	}
+	if cr.redisSaveStop != nil {
+		close(cr.redisSaveStop)
+		cr.redisSaveStop = nil
 	}
 }

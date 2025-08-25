@@ -142,7 +142,7 @@ func (rp *RedisPersistence) SaveSystemState(state *SystemState) error {
 		return fmt.Errorf("failed to save system state to Redis: %w", err)
 	}
 
-	log.Printf("Saved system state to Redis: session=%d, state=%s, remaining=%ds",
+	log.Printf("Saved system state to Redis: session=%d, state=%s, remaining=%dms",
 		state.CurrentSession, state.State, state.TimeRemaining)
 	return nil
 }
